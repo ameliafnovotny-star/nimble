@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "FitTrack",
+    "name": "Nimble",
     "slug": "fit-track",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "scheme": "fittrack",
+    "scheme": "nimble",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -14,14 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fittrack.app"
+      "bundleIdentifier": "com.anovo.nimble",
+      "buildNumber": "9",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.fittrack.app",
+      "package": "com.anovo.nimble",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#007AFF"
+        "backgroundColor": "#6B9478"
       },
       "permissions": []
     },
@@ -30,7 +34,8 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -42,6 +47,7 @@
       "eas": {
         "projectId": "41cab77c-87de-4206-9b3a-701332da8223"
       }
-    }
+    },
+    "owner": "melz12"
   }
 }

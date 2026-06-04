@@ -29,15 +29,10 @@ export function ExerciseCard({ exercise, onUpdateName, onAddSet, onUpdateSet, on
         />
         <TouchableOpacity
           onPress={() => {
-            const msg = `Remove "${exercise.name}"?`;
-            if (typeof window !== 'undefined') {
-              if (window.confirm(msg)) onRemove();
-            } else {
-              Alert.alert('Remove Exercise', msg, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Remove', style: 'destructive', onPress: onRemove },
-              ]);
-            }
+            Alert.alert('Remove Exercise', `Remove "${exercise.name}"?`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Remove', style: 'destructive', onPress: onRemove },
+            ]);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -79,6 +74,8 @@ interface SetRowProps {
 }
 
 function SetRow({ set, index, canRemove, onUpdate, onRemove }: SetRowProps) {
+  const [weightText, setWeightText] = useState(set.weight === 0 ? '' : String(set.weight));
+
   return (
     <View style={styles.setRow}>
       <View style={[styles.setNumCol, styles.setNumContainer]}>
@@ -93,8 +90,13 @@ function SetRow({ set, index, canRemove, onUpdate, onRemove }: SetRowProps) {
       />
       <TextInput
         style={[styles.input, styles.inputCol]}
-        value={set.weight === 0 ? '' : String(set.weight)}
-        onChangeText={(v) => onUpdate({ weight: parseFloat(v) || 0 })}
+        value={weightText}
+        onChangeText={setWeightText}
+        onBlur={() => {
+          const val = parseFloat(weightText.replace(',', '.')) || 0;
+          onUpdate({ weight: val });
+          setWeightText(val === 0 ? '' : String(val));
+        }}
         keyboardType="decimal-pad"
         selectTextOnFocus
         placeholder="0"
