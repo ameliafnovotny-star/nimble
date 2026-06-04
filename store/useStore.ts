@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Category, Workout, WorkoutExercise, SetEntry, ScheduledWorkout, ActiveSession, CompletedSession } from './types';
+import { supabase } from '../lib/supabase';
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -20,6 +21,8 @@ interface FitnessStore {
   scheduledWorkouts: ScheduledWorkout[];
   completedSessions: CompletedSession[];
   activeSession: ActiveSession | null;
+  hasSeenOnboarding: boolean;
+  markOnboardingSeen: () => void;
 
   addCategory: (name: string, color: string) => Category;
   updateCategory: (id: string, updates: Partial<Omit<Category, 'id'>>) => void;
@@ -45,6 +48,10 @@ interface FitnessStore {
   endSession: () => void;
   toggleSetComplete: (exerciseId: string, setId: string) => void;
 
+  lastSyncedAt: string | null;
+  syncError: string | null;
+  syncToCloud: () => Promise<void>;
+  syncFromCloud: () => Promise<void>;
 }
 
 export const useFitnessStore = create<FitnessStore>()(
@@ -55,6 +62,11 @@ export const useFitnessStore = create<FitnessStore>()(
       scheduledWorkouts: [],
       completedSessions: [],
       activeSession: null,
+      hasSeenOnboarding: false,
+      lastSyncedAt: null,
+      syncError: null,
+
+      markOnboardingSeen: () => set({ hasSeenOnboarding: true }),
 
       addCategory: (name, color) => {
         const category: Category = { id: uid(), name, color };
@@ -238,6 +250,51 @@ export const useFitnessStore = create<FitnessStore>()(
           }
           return { activeSession: { ...s.activeSession, completedSets } };
         }),
+
+      syncToCloud: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const s = get();
+        const { error } = await supabase.from('app_state').upsert({
+          user_id: user.id,
+          categories: s.categories,
+          workouts: s.workouts,
+          scheduled_workouts: s.scheduledWorkouts,
+          completed_sessions: s.completedSessions,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) {
+          set({ syncError: error.message });
+        } else {
+          set({ lastSyncedAt: new Date().toISOString(), syncError: null });
+        }
+      },
+
+      syncFromCloud: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data, error } = await supabase
+          .from('app_state')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (error && error.code !== 'PGRST116') {
+          set({ syncError: error.message });
+          return;
+        }
+        if (!data) {
+          await get().syncToCloud();
+          return;
+        }
+        set({
+          categories: data.categories ?? DEFAULT_CATEGORIES,
+          workouts: data.workouts ?? [],
+          scheduledWorkouts: data.scheduled_workouts ?? [],
+          completedSessions: data.completed_sessions ?? [],
+          lastSyncedAt: new Date().toISOString(),
+          syncError: null,
+        });
+      },
     }),
     {
       name: 'fittrack-storage',
