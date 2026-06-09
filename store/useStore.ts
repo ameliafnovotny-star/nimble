@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Category, Workout, WorkoutExercise, SetEntry, ScheduledWorkout, ActiveSession, CompletedSession } from './types';
 import { supabase } from '../lib/supabase';
+import { scheduleWorkoutReminder, cancelWorkoutReminder } from '../lib/notifications';
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -187,9 +188,13 @@ export const useFitnessStore = create<FitnessStore>()(
       scheduleWorkout: (date, workoutId) => {
         const entry: ScheduledWorkout = { id: uid(), date, workoutId };
         set((s) => ({ scheduledWorkouts: [...s.scheduledWorkouts, entry] }));
+        const workout = get().workouts.find((w) => w.id === workoutId);
+        if (workout) scheduleWorkoutReminder(entry.id, workout.name, date);
       },
-      removeScheduledWorkout: (id) =>
-        set((s) => ({ scheduledWorkouts: s.scheduledWorkouts.filter((sw) => sw.id !== id) })),
+      removeScheduledWorkout: (id) => {
+        cancelWorkoutReminder(id);
+        set((s) => ({ scheduledWorkouts: s.scheduledWorkouts.filter((sw) => sw.id !== id) }));
+      },
       markCompleted: (id) =>
         set((s) => ({
           scheduledWorkouts: s.scheduledWorkouts.map((sw) =>

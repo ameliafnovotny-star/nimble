@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useFitnessStore } from '../store/useStore';
 import { APP_COLORS } from '../constants/Colors';
 import { OnboardingModal } from '../components/OnboardingModal';
+import { requestNotificationPermissions } from '../lib/notifications';
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -16,6 +17,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     return initialize();
+  }, []);
+
+  useEffect(() => {
+    requestNotificationPermissions();
   }, []);
 
   useEffect(() => {
