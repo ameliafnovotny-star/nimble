@@ -30,6 +30,77 @@ function formatDisplayDate(dateStr: string) {
   });
 }
 
+function SessionDetail({
+  session,
+  onClose,
+}: {
+  session: CompletedSession | null;
+  onClose: () => void;
+}) {
+  if (!session) return null;
+  const totalSets = session.exercises.reduce((n, e) => n + e.sets.filter((s) => s.completed).length, 0);
+  const totalVolume = session.exercises.reduce(
+    (v, e) => v + e.sets.filter((s) => s.completed).reduce((sv, s) => sv + s.weight * s.reps, 0),
+    0
+  );
+  const mins = Math.floor(session.durationSeconds / 60);
+  return (
+    <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>{session.workoutName}</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text style={styles.modalDone}>Done</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.modalSub}>{formatDisplayDate(session.date)}</Text>
+
+      <View style={styles.statRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statVal}>{totalSets}</Text>
+          <Text style={styles.statLabel}>Sets Done</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBox}>
+          <Text style={styles.statVal}>{totalVolume > 0 ? totalVolume.toLocaleString() : '—'}</Text>
+          <Text style={styles.statLabel}>Lbs Lifted</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBox}>
+          <Text style={styles.statVal}>{mins > 0 ? `${mins}m` : '<1m'}</Text>
+          <Text style={styles.statLabel}>Duration</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.modalList}>
+        {session.exercises.map((ex) => (
+          <View key={ex.exerciseId} style={styles.detailCard}>
+            <View style={styles.detailExHeader}>
+              <Text style={styles.detailExName}>{ex.exerciseName}</Text>
+              <Text style={styles.detailExCount}>
+                {ex.sets.filter((s) => s.completed).length}/{ex.sets.length} sets
+              </Text>
+            </View>
+            {ex.sets.map((s, i) => (
+              <View key={i} style={[styles.detailSetRow, !s.completed && styles.detailSetSkipped]}>
+                <View style={styles.detailSetBullet}>
+                  {s.completed
+                    ? <Ionicons name="checkmark-circle" size={16} color={APP_COLORS.success} />
+                    : <Ionicons name="ellipse-outline" size={16} color={APP_COLORS.border} />}
+                </View>
+                <Text style={styles.detailSetNum}>Set {i + 1}</Text>
+                <Text style={styles.detailSetWeight}>
+                  {s.weight > 0 ? `${s.weight} lbs` : 'bodyweight'}
+                </Text>
+                <Text style={styles.detailSetReps}>× {s.reps} reps</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 export default function CalendarScreen() {
   const { categories, workouts, scheduledWorkouts, completedSessions, scheduleWorkout, removeScheduledWorkout } =
     useFitnessStore();
@@ -204,69 +275,7 @@ export default function CalendarScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setDetailSession(null)}
       >
-        {detailSession && (() => {
-          const totalSets = detailSession.exercises.reduce((n, e) => n + e.sets.filter(s => s.completed).length, 0);
-          const totalVolume = detailSession.exercises.reduce((v, e) => v + e.sets.filter(s => s.completed).reduce((sv, s) => sv + s.weight * s.reps, 0), 0);
-          const mins = Math.floor(detailSession.durationSeconds / 60);
-          return (
-            <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{detailSession.workoutName}</Text>
-                <TouchableOpacity onPress={() => setDetailSession(null)}>
-                  <Text style={styles.modalDone}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalSub}>{formatDisplayDate(detailSession.date)}</Text>
-
-              {/* Summary stats */}
-              <View style={styles.statRow}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{totalSets}</Text>
-                  <Text style={styles.statLabel}>Sets Done</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{totalVolume > 0 ? `${totalVolume.toLocaleString()}` : '—'}</Text>
-                  <Text style={styles.statLabel}>Lbs Lifted</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{mins > 0 ? `${mins}m` : '<1m'}</Text>
-                  <Text style={styles.statLabel}>Duration</Text>
-                </View>
-              </View>
-
-              <ScrollView contentContainerStyle={styles.modalList}>
-                {detailSession.exercises.map((ex) => {
-                  const completedSets = ex.sets.filter(s => s.completed);
-                  return (
-                    <View key={ex.exerciseId} style={styles.detailCard}>
-                      <View style={styles.detailExHeader}>
-                        <Text style={styles.detailExName}>{ex.exerciseName}</Text>
-                        <Text style={styles.detailExCount}>{completedSets.length}/{ex.sets.length} sets</Text>
-                      </View>
-                      {ex.sets.map((s, i) => (
-                        <View key={i} style={[styles.detailSetRow, !s.completed && styles.detailSetSkipped]}>
-                          <View style={styles.detailSetBullet}>
-                            {s.completed
-                              ? <Ionicons name="checkmark-circle" size={16} color={APP_COLORS.success} />
-                              : <Ionicons name="ellipse-outline" size={16} color={APP_COLORS.border} />
-                            }
-                          </View>
-                          <Text style={styles.detailSetNum}>Set {i + 1}</Text>
-                          <Text style={styles.detailSetWeight}>
-                            {s.weight > 0 ? `${s.weight} lbs` : 'bodyweight'}
-                          </Text>
-                          <Text style={styles.detailSetReps}>× {s.reps} reps</Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </SafeAreaView>
-          );
-        })()}
+        <SessionDetail session={detailSession} onClose={() => setDetailSession(null)} />
       </Modal>
     </SafeAreaView>
   );

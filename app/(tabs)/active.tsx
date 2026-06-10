@@ -48,7 +48,7 @@ export default function ActiveScreen() {
 
   const commitEdit = (workoutId: string) => {
     if (!editingCell) return;
-    const num = parseFloat(editValue);
+    const num = parseFloat(editValue.replace(',', '.'));
     if (!isNaN(num) && num >= 0) {
       updateSet(workoutId, editingCell.exerciseId, editingCell.setId, {
         [editingCell.field]: editingCell.field === 'reps' ? Math.round(num) : num,
@@ -71,18 +71,10 @@ export default function ActiveScreen() {
   const doneSets = Object.keys(activeSession?.completedSets ?? {}).length;
 
   const handleFinish = () => {
-    const confirm = () => {
-      setShowConfetti(true);
-      setTimeout(() => endSession(), 1800);
-    };
-    if (typeof window !== 'undefined') {
-      if (window.confirm('Finish this workout?')) confirm();
-    } else {
-      Alert.alert('Finish Workout', 'Mark this workout as complete?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Finish', onPress: confirm },
-      ]);
-    }
+    Alert.alert('Finish Workout', 'Mark this workout as complete?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Finish', onPress: () => { setShowConfetti(true); endSession(); } },
+    ]);
   };
 
   if (!activeSession || !workout) {
@@ -154,6 +146,7 @@ export default function ActiveScreen() {
             )}
           </SafeAreaView>
         </Modal>
+        <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
       </SafeAreaView>
     );
   }

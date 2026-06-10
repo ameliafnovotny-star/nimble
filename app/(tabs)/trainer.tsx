@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFitnessStore } from '../../store/useStore';
 import { Workout, Category } from '../../store/types';
 import { APP_COLORS } from '../../constants/Colors';
+import { GenerateWorkoutModal } from '../../components/GenerateWorkoutModal';
 
 // ---------------------------------------------------------------------------
 // Muscle group classification
@@ -155,6 +156,7 @@ export default function TrainerScreen() {
   const [deniedIds, setDeniedIds] = useState<string[]>([]);
   const [confirmedIds, setConfirmedIds] = useState<string[]>([]);
   const [altIndexes, setAltIndexes] = useState<Record<string, number>>({});
+  const [showGenerate, setShowGenerate] = useState(false);
 
   const selectedWorkout = workouts.find((w) => w.id === selectedWorkoutId) ?? null;
   const selectedCat = categories.find((c) => c.id === selectedWorkout?.categoryId);
@@ -206,8 +208,13 @@ export default function TrainerScreen() {
           <View style={styles.empty}>
             <Ionicons name="barbell-outline" size={60} color={APP_COLORS.border} />
             <Text style={styles.emptyTitle}>No Workouts Yet</Text>
-            <Text style={styles.emptyText}>Create workouts on the Workouts tab to get trainer suggestions.</Text>
+            <Text style={styles.emptyText}>Create workouts on the Workouts tab, or let Nimble build a plan for you.</Text>
+            <TouchableOpacity style={styles.generateBtn} onPress={() => setShowGenerate(true)} activeOpacity={0.85}>
+              <Ionicons name="sparkles-outline" size={18} color="#fff" />
+              <Text style={styles.generateBtnText}>Generate Workout Plan</Text>
+            </TouchableOpacity>
           </View>
+          <GenerateWorkoutModal visible={showGenerate} onClose={() => setShowGenerate(false)} />
         </SafeAreaView>
       );
     }
@@ -215,6 +222,14 @@ export default function TrainerScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          <TouchableOpacity style={styles.generateCard} onPress={() => setShowGenerate(true)} activeOpacity={0.85}>
+            <Ionicons name="sparkles-outline" size={20} color={APP_COLORS.primary} />
+            <View style={styles.generateCardText}>
+              <Text style={styles.generateCardTitle}>Generate Workout Plan</Text>
+              <Text style={styles.generateCardSub}>Answer 4 quick questions to get a beginner plan</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={APP_COLORS.primary} />
+          </TouchableOpacity>
           <Text style={styles.pickerHeading}>Choose a workout to analyse</Text>
           {workouts.map((w) => {
             const cat = categories.find((c) => c.id === w.categoryId);
@@ -237,6 +252,7 @@ export default function TrainerScreen() {
           })}
           <View style={{ height: 40 }} />
         </ScrollView>
+        <GenerateWorkoutModal visible={showGenerate} onClose={() => setShowGenerate(false)} />
       </SafeAreaView>
     );
   }
@@ -359,6 +375,31 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 20, fontWeight: '700', color: APP_COLORS.text },
   emptyText: { fontSize: 15, color: APP_COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
 
+  generateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: APP_COLORS.primary,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 8,
+  },
+  generateBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  generateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: APP_COLORS.primary + '12',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: APP_COLORS.primary + '40',
+    gap: 12,
+  },
+  generateCardText: { flex: 1, gap: 2 },
+  generateCardTitle: { fontSize: 15, fontWeight: '700', color: APP_COLORS.primary },
+  generateCardSub: { fontSize: 13, color: APP_COLORS.primary + 'AA' },
   pickerHeading: { fontSize: 13, fontWeight: '700', color: APP_COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },
   pickCard: {
     flexDirection: 'row',

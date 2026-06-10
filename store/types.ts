@@ -22,6 +22,7 @@ export interface Workout {
   categoryId: string;
   exercises: WorkoutExercise[];
   createdAt: string;
+  notes?: string;
 }
 
 export interface ScheduledWorkout {

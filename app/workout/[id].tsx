@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFitnessStore } from '../../store/useStore';
 import { ExerciseCard } from '../../components/ExerciseCard';
@@ -20,7 +20,6 @@ import { COMMON_EXERCISES } from '../../constants/exercises';
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const navigation = useNavigation();
   const router = useRouter();
 
   const {
@@ -52,45 +51,6 @@ export default function WorkoutDetailScreen() {
     return COMMON_EXERCISES.filter((e) => e.toLowerCase().includes(q));
   }, [exerciseName]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: '',
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => {
-            if (typeof window !== 'undefined') {
-              window.history.back();
-            } else {
-              router.back();
-            }
-          }}
-          style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={22} color={APP_COLORS.primary} />
-          <Text style={{ fontSize: 17, color: APP_COLORS.primary }}>Back</Text>
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => {
-            const msg = `Delete "${workout?.name}"? This cannot be undone.`;
-            if (typeof window !== 'undefined') {
-              if (window.confirm(msg)) { deleteWorkout(id!); window.history.back(); }
-            } else {
-              Alert.alert('Delete Workout', msg, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => { deleteWorkout(id!); router.back(); } },
-              ]);
-            }
-          }}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons name="trash-outline" size={21} color={APP_COLORS.destructive} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [workout?.name]);
 
   if (!workout) {
     return (
@@ -112,8 +72,27 @@ export default function WorkoutDetailScreen() {
     handleAddExercise(item);
   };
 
+  const handleDelete = () => {
+    const msg = `Delete "${workout.name}"? This cannot be undone.`;
+    Alert.alert('Delete Workout', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => { deleteWorkout(id!); router.back(); } },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          title: workout.name || 'Workout',
+          headerBackTitle: 'Back',
+          headerRight: () => (
+            <TouchableOpacity onPress={handleDelete} style={{ marginRight: 8 }}>
+              <Ionicons name="trash-outline" size={21} color={APP_COLORS.destructive} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -146,6 +125,20 @@ export default function WorkoutDetailScreen() {
               color={category?.color ?? APP_COLORS.textSecondary}
             />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.notesSection}>
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={styles.notesInput}
+            value={workout.notes ?? ''}
+            onChangeText={(text) => updateWorkout(id!, { notes: text })}
+            placeholder="Rest times, cues, goals..."
+            placeholderTextColor={APP_COLORS.textSecondary}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
         </View>
 
         <View style={styles.exercisesSection}>
@@ -306,6 +299,21 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   catSection: { paddingHorizontal: 20, marginBottom: 24 },
+  notesSection: { paddingHorizontal: 20, marginBottom: 24 },
+  notesInput: {
+    backgroundColor: APP_COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: APP_COLORS.text,
+    minHeight: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   label: {
     fontSize: 12,
     fontWeight: '700',

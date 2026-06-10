@@ -28,8 +28,7 @@ export function Confetti({ active, onDone }: Props) {
   useEffect(() => {
     if (!active) return;
 
-    const screenW = typeof window !== 'undefined' ? window.innerWidth : Dimensions.get('window').width;
-    const screenH = typeof window !== 'undefined' ? window.innerHeight : Dimensions.get('window').height;
+    const { width: screenW, height: screenH } = Dimensions.get('window');
 
     const newPieces: Piece[] = Array.from({ length: PIECE_COUNT }, (_, id) => ({
       id,
