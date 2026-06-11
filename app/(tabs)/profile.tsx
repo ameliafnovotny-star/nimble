@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useFitnessStore } from '../../store/useStore';
 import { APP_COLORS } from '../../constants/Colors';
+import { supabase } from '../../lib/supabase';
 
 export default function ProfileScreen() {
   const { user, loading, signIn, signUp, signOut } = useAuthStore();
@@ -26,6 +27,11 @@ export default function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [signUpSent, setSignUpSent] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) {
@@ -51,6 +57,22 @@ export default function ProfileScreen() {
       }
     }
     setSubmitting(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail.trim()) {
+      setResetError('Please enter your email address.');
+      return;
+    }
+    setResetError(null);
+    setResetSending(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+    setResetSending(false);
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetSent(true);
+    }
   };
 
   const handleSyncNow = async () => {
@@ -223,8 +245,74 @@ export default function ProfileScreen() {
               </Text>
             )}
           </TouchableOpacity>
+
+          {mode === 'signin' && (
+            <TouchableOpacity
+              onPress={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null); }}
+              activeOpacity={0.7}
+              style={styles.forgotBtn}
+            >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
+
+      {/* Password reset modal */}
+      {showReset && (
+        <View style={styles.resetOverlay}>
+          <View style={styles.resetSheet}>
+            {resetSent ? (
+              <>
+                <Ionicons name="mail-outline" size={40} color={APP_COLORS.primary} />
+                <Text style={styles.resetTitle}>Check your email</Text>
+                <Text style={styles.resetSub}>
+                  We sent a password reset link to{'\n'}{resetEmail}.
+                </Text>
+                <TouchableOpacity
+                  style={styles.primaryBtn}
+                  onPress={() => setShowReset(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.primaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.resetTitle}>Reset Password</Text>
+                <Text style={styles.resetSub}>
+                  Enter your email and we'll send you a link to reset your password.
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={APP_COLORS.textSecondary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {resetError ? <Text style={styles.errorText}>{resetError}</Text> : null}
+                <TouchableOpacity
+                  style={[styles.primaryBtn, resetSending && styles.primaryBtnDisabled]}
+                  onPress={handleResetPassword}
+                  disabled={resetSending}
+                  activeOpacity={0.8}
+                >
+                  {resetSending
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={styles.primaryBtnText}>Send Reset Link</Text>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowReset(false)} activeOpacity={0.7}>
+                  <Text style={styles.forgotText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -278,6 +366,26 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: { opacity: 0.6 },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+  forgotBtn: { alignItems: 'center', marginTop: 16 },
+  forgotText: { fontSize: 14, color: APP_COLORS.primary, fontWeight: '500' },
+
+  resetOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  resetSheet: {
+    backgroundColor: APP_COLORS.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 28,
+    paddingBottom: 48,
+    gap: 14,
+    alignItems: 'center',
+  },
+  resetTitle: { fontSize: 20, fontWeight: '700', color: APP_COLORS.text },
+  resetSub: { fontSize: 14, color: APP_COLORS.textSecondary, textAlign: 'center', lineHeight: 21 },
 
   avatarContainer: { alignItems: 'center', paddingTop: 24, paddingBottom: 12 },
   avatar: {
