@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useFitnessStore } from '../store/useStore';
 import { APP_COLORS } from '../constants/Colors';
 import { OnboardingModal } from '../components/OnboardingModal';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { requestNotificationPermissions } from '../lib/notifications';
 
 export default function RootLayout() {
@@ -40,6 +41,8 @@ export default function RootLayout() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <>
