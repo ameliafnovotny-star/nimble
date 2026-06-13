@@ -6,9 +6,12 @@ interface AuthStore {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isResettingPassword: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  updatePassword: (password: string) => Promise<string | null>;
+  clearPasswordReset: () => void;
   initialize: () => () => void;
 }
 
@@ -16,6 +19,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   session: null,
   loading: true,
+  isResettingPassword: false,
 
   initialize: () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,8 +28,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      set({ session, user: session?.user ?? null, loading: false });
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        set({ session, user: session?.user ?? null, loading: false, isResettingPassword: true });
+      } else {
+        set({ session, user: session?.user ?? null, loading: false });
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -45,4 +53,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
     await supabase.auth.signOut();
     set({ user: null, session: null });
   },
+
+  updatePassword: async (password) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) set({ isResettingPassword: false });
+    return error?.message ?? null;
+  },
+
+  clearPasswordReset: () => set({ isResettingPassword: false }),
 }));

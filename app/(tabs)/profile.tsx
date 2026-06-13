@@ -66,7 +66,9 @@ export default function ProfileScreen() {
     }
     setResetError(null);
     setResetSending(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: 'nimble://reset-password',
+    });
     setResetSending(false);
     if (error) {
       setResetError(error.message);
