@@ -12,6 +12,7 @@ interface AuthStore {
   signOut: () => Promise<void>;
   updatePassword: (password: string) => Promise<string | null>;
   clearPasswordReset: () => void;
+  deleteAccount: () => Promise<string | null>;
   initialize: () => () => void;
 }
 
@@ -52,6 +53,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     set({ user: null, session: null });
+  },
+
+  deleteAccount: async () => {
+    const { error } = await supabase.rpc('delete_user');
+    if (error) return error.message;
+    await supabase.auth.signOut();
+    set({ user: null, session: null });
+    return null;
   },
 
   updatePassword: async (password) => {

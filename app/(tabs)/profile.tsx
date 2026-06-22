@@ -17,7 +17,7 @@ import { APP_COLORS } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
 
 export default function ProfileScreen() {
-  const { user, loading, signIn, signUp, signOut } = useAuthStore();
+  const { user, loading, signIn, signUp, signOut, deleteAccount } = useAuthStore();
   const { syncToCloud, syncFromCloud, lastSyncedAt, syncError } = useFitnessStore();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -168,6 +168,30 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.8}>
             <Ionicons name="log-out-outline" size={18} color={APP_COLORS.destructive} />
             <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => {
+              Alert.alert(
+                'Delete Account',
+                'This will permanently delete your account and all your data. This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete Account',
+                    style: 'destructive',
+                    onPress: async () => {
+                      const err = await deleteAccount();
+                      if (err) Alert.alert('Error', err);
+                    },
+                  },
+                ]
+              );
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.deleteText}>Delete Account</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -447,4 +471,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signOutText: { fontSize: 16, fontWeight: '600', color: APP_COLORS.destructive },
+  deleteBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+  deleteText: { fontSize: 14, color: APP_COLORS.textSecondary, fontWeight: '500' },
 });
