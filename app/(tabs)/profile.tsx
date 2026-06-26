@@ -25,7 +25,6 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [signUpSent, setSignUpSent] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -53,7 +52,7 @@ export default function ProfileScreen() {
       if (err) {
         setError(err);
       } else {
-        setSignUpSent(true);
+        await syncFromCloud();
       }
     }
     setSubmitting(false);
@@ -98,26 +97,6 @@ export default function ProfileScreen() {
     );
   }
 
-  if (signUpSent) {
-    return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.center}>
-          <Ionicons name="mail-outline" size={56} color={APP_COLORS.primary} />
-          <Text style={styles.title}>Check your email</Text>
-          <Text style={styles.subtitle}>
-            We sent a confirmation link to{'\n'}{email}.{'\n\n'}Click it, then come back to sign in.
-          </Text>
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => { setSignUpSent(false); setMode('signin'); }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.primaryBtnText}>Go to Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   if (user) {
     const lastSync = lastSyncedAt

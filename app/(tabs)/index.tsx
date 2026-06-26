@@ -11,10 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFitnessStore } from '../../store/useStore';
+import { useAuthStore } from '../../store/authStore';
 import { Calendar } from '../../components/Calendar';
 import { CategoryBadge } from '../../components/CategoryBadge';
 import { APP_COLORS } from '../../constants/Colors';
 import { CompletedSession } from '../../store/types';
+import { useRouter } from 'expo-router';
 
 function todayString() {
   const d = new Date();
@@ -104,10 +106,13 @@ function SessionDetail({
 export default function CalendarScreen() {
   const { categories, workouts, scheduledWorkouts, completedSessions, scheduleWorkout, removeScheduledWorkout } =
     useFitnessStore();
+  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
 
   const [selectedDate, setSelectedDate] = useState(todayString);
   const [showPicker, setShowPicker] = useState(false);
   const [detailSession, setDetailSession] = useState<CompletedSession | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const markedDates = useMemo(() => {
     const map: Record<string, { color: string }[]> = {};
@@ -139,6 +144,23 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {!user && !bannerDismissed && (
+          <TouchableOpacity
+            style={styles.cloudBanner}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="cloud-outline" size={20} color={APP_COLORS.primary} />
+            <View style={styles.cloudBannerText}>
+              <Text style={styles.cloudBannerTitle}>Back up your workouts</Text>
+              <Text style={styles.cloudBannerSub}>Create a free account to sync across devices</Text>
+            </View>
+            <TouchableOpacity onPress={(e) => { e.stopPropagation(); setBannerDismissed(true); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={16} color={APP_COLORS.textSecondary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
         <Calendar
           markedDates={markedDates}
           onDayPress={setSelectedDate}
@@ -284,6 +306,21 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: APP_COLORS.background },
   scroll: { paddingBottom: 40 },
+  cloudBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: APP_COLORS.primary + '12',
+    borderRadius: 14,
+    padding: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: APP_COLORS.primary + '30',
+    gap: 10,
+  },
+  cloudBannerText: { flex: 1, gap: 2 },
+  cloudBannerTitle: { fontSize: 14, fontWeight: '700', color: APP_COLORS.primary },
+  cloudBannerSub: { fontSize: 12, color: APP_COLORS.primary + 'AA' },
   daySection: { paddingHorizontal: 16, marginTop: 20 },
   dayHeader: {
     flexDirection: 'row',
