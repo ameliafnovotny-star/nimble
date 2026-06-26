@@ -16,15 +16,23 @@ import { useFitnessStore } from '../../store/useStore';
 import { APP_COLORS } from '../../constants/Colors';
 import { Confetti } from '../../components/Confetti';
 
-function useElapsed(startedAt: string | null) {
+function useElapsed(startedAt: string | null, pausedAt: string | null, pausedSeconds: number) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     if (!startedAt) { setElapsed(0); return; }
-    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+    if (pausedAt) {
+      const elapsedAtPause = Math.floor(
+        (new Date(pausedAt).getTime() - new Date(startedAt).getTime()) / 1000
+      ) - pausedSeconds;
+      setElapsed(Math.max(0, elapsedAtPause));
+      return;
+    }
+    const tick = () =>
+      setElapsed(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) - pausedSeconds));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [startedAt]);
+  }, [startedAt, pausedAt, pausedSeconds]);
   return elapsed;
 }
 
@@ -37,7 +45,7 @@ function formatElapsed(seconds: number) {
 }
 
 export default function ActiveScreen() {
-  const { workouts, categories, activeSession, completedSessions, startSession, endSession, toggleSetComplete, updateSet } =
+  const { workouts, categories, activeSession, completedSessions, startSession, endSession, toggleSetComplete, updateSet, pauseSession, resumeSession } =
     useFitnessStore();
 
   const [showPicker, setShowPicker] = useState(false);
@@ -56,7 +64,12 @@ export default function ActiveScreen() {
     }
     setEditingCell(null);
   };
-  const elapsed = useElapsed(activeSession?.startedAt ?? null);
+  const isPaused = !!activeSession?.pausedAt;
+  const elapsed = useElapsed(
+    activeSession?.startedAt ?? null,
+    activeSession?.pausedAt ?? null,
+    activeSession?.pausedSeconds ?? 0,
+  );
 
   const workout = workouts.find((w) => w.id === activeSession?.workoutId);
   const category = categories.find((c) => c.id === workout?.categoryId);
@@ -165,10 +178,24 @@ export default function ActiveScreen() {
           )}
         </View>
         <View style={styles.sessionHeaderRight}>
-          <Text style={styles.timer}>{formatElapsed(elapsed)}</Text>
+          <Text style={[styles.timer, isPaused && styles.timerPaused]}>{formatElapsed(elapsed)}</Text>
           <Text style={styles.progress}>{doneSets}/{totalSets} sets</Text>
+          <TouchableOpacity
+            style={styles.pauseBtn}
+            onPress={isPaused ? resumeSession : pauseSession}
+            activeOpacity={0.8}
+          >
+            <Ionicons name={isPaused ? 'play' : 'pause'} size={14} color={APP_COLORS.primary} />
+            <Text style={styles.pauseBtnText}>{isPaused ? 'Resume' : 'Pause'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
+      {isPaused && (
+        <View style={styles.pausedBanner}>
+          <Ionicons name="pause-circle" size={15} color={APP_COLORS.textSecondary} />
+          <Text style={styles.pausedBannerText}>Workout Paused</Text>
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {workout.exercises.map((ex) => {
@@ -464,4 +491,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   finishBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+
+  timerPaused: { color: APP_COLORS.textSecondary },
+  pauseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: APP_COLORS.primary + '60',
+    backgroundColor: APP_COLORS.primary + '10',
+    marginTop: 4,
+  },
+  pauseBtnText: { fontSize: 12, fontWeight: '600', color: APP_COLORS.primary },
+  pausedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: APP_COLORS.border + '60',
+  },
+  pausedBannerText: { fontSize: 13, fontWeight: '600', color: APP_COLORS.textSecondary },
 });

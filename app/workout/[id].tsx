@@ -97,6 +97,7 @@ export default function WorkoutDetailScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
+        automaticallyAdjustKeyboardInsets
       >
         <View style={styles.nameSection}>
           <TextInput

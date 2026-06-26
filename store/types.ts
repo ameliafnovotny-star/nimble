@@ -35,7 +35,9 @@ export interface ScheduledWorkout {
 export interface ActiveSession {
   workoutId: string;
   startedAt: string;
-  completedSets: Record<string, boolean>; // key: `${exerciseId}-${setId}`
+  completedSets: Record<string, boolean>;
+  pausedAt?: string;
+  pausedSeconds: number;
 }
 
 export interface CompletedSessionSet {

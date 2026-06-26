@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Category, Workout, WorkoutExercise, SetEntry, ScheduledWorkout, ActiveSession, CompletedSession } from './types';
+import { Category, Workout, WorkoutExercise, SetEntry, ScheduledWorkout, ActiveSession, CompletedSession, CompletedSessionExercise } from './types';
 import { supabase } from '../lib/supabase';
 import { scheduleWorkoutReminder, cancelWorkoutReminder } from '../lib/notifications';
 
@@ -48,6 +48,9 @@ interface FitnessStore {
   startSession: (workoutId: string) => void;
   endSession: () => void;
   toggleSetComplete: (exerciseId: string, setId: string) => void;
+  pauseSession: () => void;
+  resumeSession: () => void;
+  logPastSession: (workoutId: string, date: string, scheduledId: string, exercises: CompletedSessionExercise[]) => void;
 
   lastSyncedAt: string | null;
   syncError: string | null;
@@ -203,7 +206,7 @@ export const useFitnessStore = create<FitnessStore>()(
         })),
 
       startSession: (workoutId) =>
-        set({ activeSession: { workoutId, startedAt: new Date().toISOString(), completedSets: {} } }),
+        set({ activeSession: { workoutId, startedAt: new Date().toISOString(), completedSets: {}, pausedSeconds: 0 } }),
       endSession: () =>
         set((s) => {
           if (!s.activeSession) return s;
@@ -216,9 +219,13 @@ export const useFitnessStore = create<FitnessStore>()(
             workoutId: s.activeSession.workoutId,
             completedAt: now.toISOString(),
           };
-          const durationSeconds = Math.floor(
+          const pausedSecs = s.activeSession.pausedSeconds ?? 0;
+          const currentPauseSecs = s.activeSession.pausedAt
+            ? Math.floor((now.getTime() - new Date(s.activeSession.pausedAt).getTime()) / 1000)
+            : 0;
+          const durationSeconds = Math.max(0, Math.floor(
             (now.getTime() - new Date(s.activeSession.startedAt).getTime()) / 1000
-          );
+          ) - pausedSecs - currentPauseSecs);
           const session: CompletedSession = {
             id: uid(),
             workoutId: s.activeSession.workoutId,
@@ -254,6 +261,44 @@ export const useFitnessStore = create<FitnessStore>()(
             completedSets[key] = true;
           }
           return { activeSession: { ...s.activeSession, completedSets } };
+        }),
+      pauseSession: () =>
+        set((s) => {
+          if (!s.activeSession || s.activeSession.pausedAt) return s;
+          return { activeSession: { ...s.activeSession, pausedAt: new Date().toISOString() } };
+        }),
+      resumeSession: () =>
+        set((s) => {
+          if (!s.activeSession || !s.activeSession.pausedAt) return s;
+          const additional = Math.floor((Date.now() - new Date(s.activeSession.pausedAt).getTime()) / 1000);
+          return {
+            activeSession: {
+              ...s.activeSession,
+              pausedAt: undefined,
+              pausedSeconds: (s.activeSession.pausedSeconds ?? 0) + additional,
+            },
+          };
+        }),
+      logPastSession: (workoutId, date, scheduledId, exercises) =>
+        set((s) => {
+          const workout = s.workouts.find((w) => w.id === workoutId);
+          const now = new Date().toISOString();
+          const session: CompletedSession = {
+            id: uid(),
+            workoutId,
+            workoutName: workout?.name ?? '',
+            date,
+            startedAt: now,
+            endedAt: now,
+            durationSeconds: 0,
+            exercises,
+          };
+          return {
+            completedSessions: [...s.completedSessions, session],
+            scheduledWorkouts: s.scheduledWorkouts.map((sw) =>
+              sw.id === scheduledId ? { ...sw, completedAt: now } : sw
+            ),
+          };
         }),
 
       syncToCloud: async () => {
