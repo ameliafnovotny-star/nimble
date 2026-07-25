@@ -336,14 +336,37 @@ export const useFitnessStore = create<FitnessStore>()(
           await get().syncToCloud();
           return;
         }
-        set({
+        const s = get();
+
+        // Merge completed sessions: union of cloud + local so locally-saved
+        // sessions that haven't synced yet (e.g. app closed before 3s debounce)
+        // are never lost.
+        const cloudSessions: CompletedSession[] = data.completed_sessions ?? [];
+        const sessionMap = new Map<string, CompletedSession>();
+        for (const item of cloudSessions) sessionMap.set(item.id, item);
+        for (const item of s.completedSessions) sessionMap.set(item.id, item);
+
+        // Merge scheduled workouts the same way, preferring whichever copy
+        // has a completedAt timestamp (i.e. the finished version wins).
+        const cloudScheduled: ScheduledWorkout[] = data.scheduled_workouts ?? [];
+        const scheduledMap = new Map<string, ScheduledWorkout>();
+        for (const item of cloudScheduled) scheduledMap.set(item.id, item);
+        for (const item of s.scheduledWorkouts) {
+          const existing = scheduledMap.get(item.id);
+          scheduledMap.set(item.id, (item.completedAt && !existing?.completedAt) ? item : (existing ?? item));
+        }
+
+        const merged = {
           categories: data.categories ?? DEFAULT_CATEGORIES,
           workouts: data.workouts ?? [],
-          scheduledWorkouts: data.scheduled_workouts ?? [],
-          completedSessions: data.completed_sessions ?? [],
+          scheduledWorkouts: Array.from(scheduledMap.values()),
+          completedSessions: Array.from(sessionMap.values()),
           lastSyncedAt: new Date().toISOString(),
           syncError: null,
-        });
+        };
+        set(merged);
+        // Push the merged result back so cloud and local are in sync.
+        await get().syncToCloud();
       },
     }),
     {
